@@ -65,7 +65,6 @@ class FileManager {
     const filePath = path.join(this.dataDir, fileName);
     await fs.unlink(filePath);
     logger.success(`Deleted file: ${fileName}`);
-    return true;
   }
 
   async createDirectory(dirName) {
@@ -73,16 +72,61 @@ class FileManager {
     const dirPath = path.join(this.dataDir, dirName);
     await fs.mkdir(dirPath, { recursive: true });
     logger.success(`Created directory: ${dirName}`);
-    return true;
   }
 
   async copyFile(source, destination) {
     await this.ensureDataDir();
-    const sourcePath = path.join(this.dataDir, source);
-    const destPath = path.join(this.dataDir, destination);
-    await fs.copyFile(sourcePath, destPath);
+    await fs.copyFile(
+      path.join(this.dataDir, source),
+      path.join(this.dataDir, destination)
+    );
     logger.success(`Copied ${source} to ${destination}`);
-    return true;
+  }
+
+  // Challenge 1: append
+  async appendToFile(fileName, text) {
+    await this.ensureDataDir();
+    const filePath = path.join(this.dataDir, fileName);
+    await fs.appendFile(filePath, text + '\n', 'utf-8');
+    logger.success(`Appended to file: ${fileName}`);
+  }
+
+  // Challenge 2: search
+  async searchInFiles(keyword) {
+    await this.ensureDataDir();
+    const entries = await fs.readdir(this.dataDir);
+    let found = false;
+
+    for (const file of entries) {
+      const filePath = path.join(this.dataDir, file);
+      const stat = await fs.stat(filePath);
+      if (!stat.isFile()) continue;
+
+      const content = await fs.readFile(filePath, 'utf-8');
+      if (content.includes(keyword)) {
+        logger.info(`Found in file: ${file}`);
+        found = true;
+      }
+    }
+
+    if (!found) {
+      logger.warning(`No files contain keyword: ${keyword}`);
+    }
+  }
+
+  // Challenge 3: stats
+  async fileStats(fileName) {
+    await this.ensureDataDir();
+    const filePath = path.join(this.dataDir, fileName);
+    const stat = await fs.stat(filePath);
+    const content = await fs.readFile(filePath, 'utf-8');
+    const lines = content.split(/\r?\n/).length;
+
+    logger.info(`Stats for '${fileName}':`);
+    console.log(`  Size: ${stat.size} bytes`);
+    console.log(`  Created: ${stat.birthtime}`);
+    console.log(`  Modified: ${stat.mtime}`);
+    console.log(`  Lines: ${lines}`);
   }
 }
 
