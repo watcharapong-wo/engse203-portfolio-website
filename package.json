@@ -1,0 +1,18 @@
+{
+  "name": "todo-app-db",
+  "version": "1.0.0",
+  "description": "Workshop 13 - Level 1: Todo App Database",
+  "main": "6-todo-app.js",
+  "type": "commonjs",
+  "scripts": {
+    "create": "node 1-create-table.js",
+    "insert": "node 2-insert-data.js",
+    "select": "node 3-select-data.js",
+    "update": "node 4-update-data.js",
+    "delete": "node 5-delete-data.js",
+    "app": "node 6-todo-app.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.6.0"
+  }
+}

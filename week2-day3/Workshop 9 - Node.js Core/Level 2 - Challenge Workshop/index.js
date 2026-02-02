@@ -43,12 +43,6 @@ function showHelp() {
   console.log(' node index.js list --overdue');
   console.log(' node index.js add "Code review" --tag work');
   console.log(' node index.js list --tag work');
-  console.log(' node index.js search "Node"');
-  console.log(' node index.js list --sort priority');
-  console.log(' node index.js add "Meeting" high --due 2024-12-31');
-  console.log(' node index.js list --overdue');
-  console.log(' node index.js add "Code review" --tag work');
-  console.log(' node index.js list --tag work');
 }
 
 function parseOptions(args) {
