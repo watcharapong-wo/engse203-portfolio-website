@@ -3,19 +3,42 @@ const Todo = require('../models/Todo');
 
 /**
  * GET /api/todos
- * ดึง todos ทั้งหมด
+ * ดึง todos ทั้งหมด พร้อม search, pagination, และ filters
+ * Query params:
+ * - done: true/false
+ * - priority: low/medium/high
+ * - sort: newest/oldest/priority
+ * - search: ค้นหาใน task
+ * - page: หน้าที่ต้องการ (default: 1)
+ * - limit: จำนวนต่อหน้า (default: 10)
+ * - overdue: true (กรอง todos ที่เลยกำหนด)
  */
 exports.getAll = async (req, res) => {
   try {
-    const { done, priority, sort } = req.query;
+    const { done, priority, sort, search, page, limit, overdue } = req.query;
     
     // Build filter
     const filter = {};
+    
+    // Filter by done status
     if (done !== undefined) {
       filter.done = done === 'true';
     }
+    
+    // Filter by priority
     if (priority) {
       filter.priority = priority;
+    }
+
+    // Challenge 1: Search
+    if (search) {
+      filter.task = { $regex: search, $options: 'i' }; // case-insensitive
+    }
+
+    // Challenge 3: Overdue filter
+    if (overdue === 'true') {
+      filter.dueDate = { $lt: new Date() };
+      filter.done = false;
     }
 
     // Build sort
@@ -28,11 +51,26 @@ exports.getAll = async (req, res) => {
       sortOption = { priority: -1 };
     }
 
-    const todos = await Todo.find(filter).sort(sortOption);
+    // Challenge 2: Pagination
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    // Execute query with pagination
+    const todos = await Todo.find(filter)
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limitNum);
+
+    // Get total count for pagination info
+    const total = await Todo.countDocuments(filter);
 
     res.json({
       success: true,
       count: todos.length,
+      total: total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
       data: todos
     });
   } catch (error) {
