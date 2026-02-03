@@ -1,48 +1,51 @@
-# Level 1: MongoDB CRUD Operations
+# Level 1: Todo App with MongoDB
 
-เรียนรู้พื้นฐาน MongoDB และ Mongoose ผ่านระบบจัดการข้อมูลนักเรียน
+เรียนรู้พื้นฐาน MongoDB + Mongoose ผ่านการสร้าง Todo API
 
 ## 🎯 เป้าหมาย
 
 - เชื่อมต่อ MongoDB ด้วย Mongoose
 - สร้าง Schema และ Model
-- CRUD Operations (Create, Read, Update, Delete)
-- Query และ Filter ข้อมูล
-- Aggregation Pipeline พื้นฐาน
-- Validation และ Middleware
+- CRUD Operations
+- Query Filters และ Sorting
+- Validation
+- Aggregation Pipeline
 
-## 📚 สิ่งที่จะได้เรียนรู้
+## 📚 API Endpoints
 
-### 1. MongoDB Connection
-```javascript
-mongoose.connect(MONGODB_URI)
+```
+GET    /api/todos          → ดึงทั้งหมด (filter, sort)
+GET    /api/todos/:id      → ดึงตาม ID
+POST   /api/todos          → สร้างใหม่
+PUT    /api/todos/:id      → แก้ไขทั้งหมด
+PATCH  /api/todos/:id/done → toggle สถานะ
+DELETE /api/todos/:id      → ลบ
+GET    /api/todos/stats    → สถิติ (aggregation)
 ```
 
-### 2. Schema Definition
-```javascript
-const schema = new mongoose.Schema({
-  field: { type: String, required: true }
-})
+## 📂 โครงสร้างโปรเจค
+
 ```
-
-### 3. CRUD Operations
-- **Create**: `create()`, `insertMany()`
-- **Read**: `find()`, `findById()`, `findOne()`
-- **Update**: `findByIdAndUpdate()`, `updateMany()`
-- **Delete**: `findByIdAndDelete()`, `deleteMany()`
-
-### 4. Query Operators
-- `$eq`, `$gt`, `$gte`, `$lt`, `$lte`
-- `$in`, `$nin`
-- `$and`, `$or`, `$not`
-- `$regex`, `$exists`
-
-### 5. Aggregation
-```javascript
-Student.aggregate([
-  { $match: { status: 'active' } },
-  { $group: { _id: '$major', count: { $sum: 1 } } }
-])
+Level 1 - Guided Workshop/
+├── .env.example
+├── .gitignore
+├── package.json
+├── server.js              # Entry point
+│
+└── src/
+    ├── app.js             # Express app setup
+    │
+    ├── config/
+    │   └── database.js    # MongoDB connection
+    │
+    ├── models/
+    │   └── Todo.js        # Mongoose schema
+    │
+    ├── controllers/
+    │   └── todoController.js
+    │
+    └── routes/
+        └── todos.js
 ```
 
 ## 🚀 เริ่มต้น
@@ -53,7 +56,7 @@ Student.aggregate([
 npm install
 ```
 
-### 2. ตั้งค่า Environment Variables
+### 2. ตั้งค่า Environment
 
 สร้างไฟล์ `.env` จาก `.env.example`:
 
@@ -63,203 +66,256 @@ cp .env.example .env
 
 แก้ไข `.env`:
 ```env
-MONGODB_URI=mongodb://localhost:27017/workshop15_students
-# หรือใช้ MongoDB Atlas (แนะนำ)
+PORT=3000
+MONGODB_URI=mongodb://localhost:27017/todo-app
+# หรือใช้ MongoDB Atlas
+NODE_ENV=development
 ```
 
-### 3. รันโปรแกรม
+### 3. รัน Server
 
 ```bash
 npm start
+# หรือ
+npm run dev  # with nodemon
 ```
 
-หรือใช้ watch mode:
-```bash
-npm run dev
-```
+Server จะรันที่: http://localhost:3000
 
-## 📂 โครงสร้างโปรเจค
-
-```
-Level 1 - Guided Workshop/
-├── config/
-│   └── database.js       # MongoDB connection
-├── models/
-│   └── Student.js        # Student Schema และ Model
-├── index.js              # Main program - CRUD operations
-├── package.json
-├── .env.example
-└── .gitignore
-```
-
-## 📖 Code ที่สำคัญ
-
-### Schema Definition (models/Student.js)
+## 📖 Todo Schema
 
 ```javascript
-const studentSchema = new mongoose.Schema({
-  studentId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  firstName: String,
-  lastName: String,
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  age: Number,
-  major: {
-    type: String,
-    enum: ['Computer Science', 'Engineering', 'Business']
-  },
-  gpa: {
-    type: Number,
-    min: 0.0,
-    max: 4.0
-  }
-}, {
-  timestamps: true // createdAt, updatedAt
-})
+{
+  task: String,        // required, max 200 chars
+  done: Boolean,       // default: false
+  priority: String,    // 'low' | 'medium' | 'high'
+  dueDate: Date,
+  createdAt: Date,     // auto
+  updatedAt: Date      // auto
+}
 ```
 
-### Virtual Fields
+### Features:
+- ✅ Virtual field: `fullInfo`
+- ✅ Instance method: `toggleDone()`
+- ✅ Static method: `getStats()`
+- ✅ Pre/Post save hooks
 
-```javascript
-studentSchema.virtual('fullName').get(function() {
-  return `${this.firstName} ${this.lastName}`
-})
+## 🧪 ทดสอบ API
+
+### 1. สร้าง Todo
+
+```http
+POST http://localhost:3000/api/todos
+Content-Type: application/json
+
+{
+  "task": "Learn MongoDB",
+  "priority": "high",
+  "dueDate": "2026-02-10"
+}
 ```
 
-### Indexes
+### 2. ดึงทั้งหมด
 
-```javascript
-studentSchema.index({ email: 1 })
-studentSchema.index({ major: 1, gpa: -1 }) // Compound index
+```http
+GET http://localhost:3000/api/todos
 ```
 
-### Instance Methods
+**Filter by status:**
+```http
+GET http://localhost:3000/api/todos?done=false
+```
 
-```javascript
-studentSchema.methods.getInfo = function() {
-  return {
-    id: this.studentId,
-    name: this.fullName,
-    gpa: this.gpa
+**Filter by priority:**
+```http
+GET http://localhost:3000/api/todos?priority=high
+```
+
+**Sort:**
+```http
+GET http://localhost:3000/api/todos?sort=newest
+GET http://localhost:3000/api/todos?sort=oldest
+GET http://localhost:3000/api/todos?sort=priority
+```
+
+### 3. ดึงตาม ID
+
+```http
+GET http://localhost:3000/api/todos/:id
+```
+
+### 4. แก้ไข
+
+```http
+PUT http://localhost:3000/api/todos/:id
+Content-Type: application/json
+
+{
+  "task": "Learn MongoDB & Mongoose",
+  "done": true,
+  "priority": "high"
+}
+```
+
+### 5. Toggle Status
+
+```http
+PATCH http://localhost:3000/api/todos/:id/done
+```
+
+### 6. ลบ
+
+```http
+DELETE http://localhost:3000/api/todos/:id
+```
+
+### 7. ดูสถิติ
+
+```http
+GET http://localhost:3000/api/todos/stats
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total": 10,
+    "completed": 3,
+    "pending": 7
   }
 }
 ```
 
-### Static Methods
+## 💡 จุดเด่น
+
+### 1. Mongoose Schema Validation
 
 ```javascript
-studentSchema.statics.findByMajor = function(major) {
-  return this.find({ major, status: 'active' })
+task: {
+  type: String,
+  required: [true, 'Task is required'],
+  trim: true,
+  maxlength: [200, 'Task must be less than 200 characters']
 }
 ```
 
-## 🧪 ตัวอย่าง Operations
+### 2. Enum Values
 
-### Create
 ```javascript
-const student = await Student.create({
-  studentId: 'STD0001',
-  firstName: 'John',
-  lastName: 'Doe',
-  email: 'john@example.com',
-  age: 20,
-  major: 'Computer Science',
-  gpa: 3.75
-})
+priority: {
+  type: String,
+  enum: ['low', 'medium', 'high'],
+  default: 'medium'
+}
 ```
 
-### Read
+### 3. Virtual Fields
+
 ```javascript
-// Find all
-const students = await Student.find()
-
-// Find with conditions
-const csStudents = await Student.find({ 
-  major: 'Computer Science',
-  gpa: { $gte: 3.5 }
-})
-
-// Find one
-const student = await Student.findById(id)
+todoSchema.virtual('fullInfo').get(function() {
+  return `${this.task} [${this.done ? 'Done' : 'Pending'}]`;
+});
 ```
 
-### Update
+### 4. Instance Methods
+
 ```javascript
-const updated = await Student.findByIdAndUpdate(
-  id,
-  { gpa: 3.85 },
-  { new: true } // return updated document
-)
+todo.toggleDone()  // ใช้งานกับ document instance
 ```
 
-### Delete
+### 5. Static Methods
+
 ```javascript
-await Student.findByIdAndDelete(id)
-await Student.deleteMany({ status: 'inactive' })
+Todo.getStats()  // ใช้งานกับ Model
 ```
 
-### Advanced Queries
+### 6. Middleware (Hooks)
+
 ```javascript
-// OR condition
-const results = await Student.find({
-  $or: [
-    { major: 'Computer Science' },
-    { major: 'Engineering' }
-  ]
-})
+todoSchema.pre('save', function(next) {
+  console.log('💾 Saving todo:', this.task);
+  next();
+});
 
-// Regex search
-const results = await Student.find({
-  firstName: { $regex: /^J/i }
-})
-
-// Sort and limit
-const top3 = await Student.find()
-  .sort({ gpa: -1 })
-  .limit(3)
+todoSchema.post('save', function(doc) {
+  console.log('✅ Todo saved:', doc._id);
+});
 ```
 
-### Aggregation
+### 7. Aggregation Pipeline
+
 ```javascript
-const stats = await Student.aggregate([
-  { $match: { status: 'active' } },
-  { $group: {
-    _id: '$major',
-    count: { $sum: 1 },
-    avgGPA: { $avg: '$gpa' }
-  }},
-  { $sort: { avgGPA: -1 } }
+Todo.aggregate([
+  {
+    $group: {
+      _id: null,
+      total: { $sum: 1 },
+      completed: { $sum: { $cond: ['$done', 1, 0] } }
+    }
+  }
 ])
 ```
 
-## 🎓 ท้าทาย
+## 🎓 สิ่งที่เรียนรู้
 
-หลังจากเข้าใจโค้ดแล้ว ลองเพิ่ม:
+1. ✅ MongoDB Connection
+2. ✅ Mongoose Schema & Models
+3. ✅ CRUD Operations
+4. ✅ Query Filters
+5. ✅ Sorting
+6. ✅ Validation
+7. ✅ Virtual Fields
+8. ✅ Instance & Static Methods
+9. ✅ Middleware/Hooks
+10. ✅ Aggregation Pipeline
+11. ✅ Error Handling
 
-1. ✅ เพิ่มฟิลด์ `phoneNumber` พร้อม validation
-2. ✅ สร้าง method `updateGPA(newGPA)` ใน Student model
-3. ✅ Query หานักเรียนที่อายุ 20-22 ปี
-4. ✅ Aggregation หาค่าเฉลี่ย GPA แยกตามปีที่เข้าเรียน
-5. ✅ เพิ่ม Compound Index สำหรับ `major` + `enrollmentYear`
+## 🔍 Error Handling
+
+### Validation Error
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Validation failed",
+    "details": ["Task is required"]
+  }
+}
+```
+
+### Not Found
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Todo not found"
+  }
+}
+```
+
+### Invalid ID
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Invalid todo ID"
+  }
+}
+```
 
 ## 📚 เอกสารอ้างอิง
 
 - [Mongoose Documentation](https://mongoosejs.com/docs/)
-- [MongoDB Query Operators](https://docs.mongodb.com/manual/reference/operator/query/)
-- [Aggregation Pipeline](https://docs.mongodb.com/manual/core/aggregation-pipeline/)
+- [MongoDB Aggregation](https://docs.mongodb.com/manual/aggregation/)
+- [Express.js Guide](https://expressjs.com/en/guide/routing.html)
 
 ## ⚠️ หมายเหตุ
 
-- ตรวจสอบว่า MongoDB รันอยู่ก่อนใช้งาน
-- ใช้ MongoDB Atlas (cloud) จะสะดวกกว่าติดตั้งเอง
-- ดู MongoDB Compass (GUI) เพื่อดูข้อมูลใน database
+- ต้องมี MongoDB ติดตั้งและรันอยู่
+- หรือใช้ MongoDB Atlas (cloud) แทน
+- ใช้ MongoDB Compass (GUI) เพื่อดูข้อมูล
 
 ---
 
