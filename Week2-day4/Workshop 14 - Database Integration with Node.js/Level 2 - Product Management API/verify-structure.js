@@ -65,7 +65,7 @@ const categoryRoutes = checkFile('src/routes/categories.js', 'Category Routes');
 const productRoutes = checkFile('src/routes/products.js', 'Product Routes');
 
 // Check database files
-checkFile('database/schema.sql', 'Database Schema (schema.sql)');
+const schemaSql = checkFile('database/schema.sql', 'Database Schema (schema.sql)');
 checkFile('database/seed.sql', 'Seed Data (seed.sql)');
 
 // Check documentation
@@ -156,8 +156,11 @@ console.log('\n🔒 SECURITY & BEST PRACTICES:\n');
 
 // Security checks
 if (productModel) {
-  checkContent(productModel, 'db.prepare', 'Using prepared statements');
-  checkContent(productModel, 'CHECK(price > 0)', 'Price validation in schema');
+  checkContent(productModel, '.prepare(', 'Using prepared statements');
+}
+
+if (schemaSql) {
+  checkContent(schemaSql, 'CHECK(price > 0)', 'Price validation in schema');
 }
 
 if (categoryController) {

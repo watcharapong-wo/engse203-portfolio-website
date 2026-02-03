@@ -1,4 +1,4 @@
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
@@ -10,60 +10,78 @@ class DatabaseManager {
   }
 
   connect() {
-    try {
-      this.db = new Database(DB_PATH, {
-        verbose: process.env.NODE_ENV === 'development' ? console.log : null,
+    return new Promise((resolve, reject) => {
+      this.db = new sqlite3.Database(DB_PATH, (err) => {
+        if (err) {
+          console.error('❌ Database connection error:', err.message);
+          reject(err);
+        } else {
+          // Enable foreign keys
+          this.db.run('PRAGMA foreign_keys = ON', (err) => {
+            if (err) reject(err);
+            else {
+              console.log('✅ Database connected:', DB_PATH);
+              resolve(this.db);
+            }
+          });
+        }
       });
-
-      // Enable foreign keys
-      this.db.pragma('foreign_keys = ON');
-      
-      console.log('✅ Database connected:', DB_PATH);
-      return this.db;
-    } catch (error) {
-      console.error('❌ Database connection error:', error.message);
-      throw error;
-    }
+    });
   }
 
   getDb() {
     if (!this.db) {
-      this.connect();
+      throw new Error('Database not connected. Call connect() first.');
     }
     return this.db;
   }
 
   runScript(scriptPath) {
-    try {
-      const sql = fs.readFileSync(scriptPath, 'utf-8');
-      this.db.exec(sql);
-      console.log(`✅ Executed script: ${scriptPath}`);
-    } catch (error) {
-      console.error(`❌ Error running script ${scriptPath}:`, error.message);
-      throw error;
-    }
+    return new Promise((resolve, reject) => {
+      try {
+        const sql = fs.readFileSync(scriptPath, 'utf-8');
+        this.db.exec(sql, (err) => {
+          if (err) {
+            console.error(`❌ Error running script ${scriptPath}:`, err.message);
+            reject(err);
+          } else {
+            console.log(`✅ Executed script: ${scriptPath}`);
+            resolve();
+          }
+        });
+      } catch (error) {
+        console.error(`❌ Error reading script ${scriptPath}:`, error.message);
+        reject(error);
+      }
+    });
   }
 
-  createSchema() {
+  async createSchema() {
     try {
-      this.runScript(path.join(__dirname, '../database/schema.sql'));
+      await this.runScript(path.join(__dirname, '../database/schema.sql'));
     } catch (error) {
       console.error('❌ Error creating schema:', error.message);
       throw error;
     }
   }
 
-  seedData() {
+  async seedData() {
     try {
-      this.runScript(path.join(__dirname, '../database/seed.sql'));
+      await this.runScript(path.join(__dirname, '../database/seed.sql'));
     } catch (error) {
       console.error('❌ Error seeding data:', error.message);
       throw error;
     }
   }
 
-  reset() {
+  async reset() {
     try {
+      // Close existing connection
+      if (this.db) {
+        await new Promise((resolve) => this.db.close(resolve));
+        this.db = null;
+      }
+
       // Delete database file if exists
       if (fs.existsSync(DB_PATH)) {
         fs.unlinkSync(DB_PATH);
@@ -71,10 +89,9 @@ class DatabaseManager {
       }
 
       // Reconnect and recreate
-      this.db = null;
-      this.connect();
-      this.createSchema();
-      this.seedData();
+      await this.connect();
+      await this.createSchema();
+      await this.seedData();
       console.log('✅ Database reset complete');
     } catch (error) {
       console.error('❌ Error resetting database:', error.message);
@@ -83,10 +100,16 @@ class DatabaseManager {
   }
 
   close() {
-    if (this.db) {
-      this.db.close();
-      console.log('📦 Database closed');
-    }
+    return new Promise((resolve) => {
+      if (this.db) {
+        this.db.close(() => {
+          console.log('📦 Database closed');
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
   }
 }
 

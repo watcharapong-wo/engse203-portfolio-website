@@ -1,125 +1,107 @@
-const db = require('../db');
+const dbManager = require('../db');
 
-/**
- * Category Model
- * Handles all category-related database operations
- */
+// Helper to promisify database methods
+const dbAll = (db, sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
+const dbGet = (db, sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+};
+
+const dbRun = (db, sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve({ lastID: this.lastID, changes: this.changes });
+    });
+  });
+};
+
 class Category {
-  static getAll(options = {}) {
-    try {
-      let sql = 'SELECT id, name, description, created_at, updated_at FROM categories';
-      const params = [];
+  static async getAll(options = {}) {
+    const db = dbManager.getDb();
+    const { search } = options;
 
-      // Search by name
-      if (options.search) {
-        sql += ' WHERE name LIKE ?';
-        params.push(`%${options.search}%`);
-      }
+    let sql = 'SELECT * FROM categories';
+    const params = [];
 
-      sql += ' ORDER BY name ASC';
-
-      const stmt = db.getDb().prepare(sql);
-      return stmt.all(...params);
-    } catch (error) {
-      console.error('❌ Error in Category.getAll():', error.message);
-      throw error;
+    if (search) {
+      sql += ' WHERE name LIKE ? OR description LIKE ?';
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm);
     }
+
+    sql += ' ORDER BY name ASC';
+
+    return await dbAll(db, sql, params);
   }
 
-  static getById(id) {
-    try {
-      const sql = `
-        SELECT id, name, description, created_at, updated_at 
-        FROM categories 
-        WHERE id = ?
-      `;
-      const stmt = db.getDb().prepare(sql);
-      return stmt.get(id);
-    } catch (error) {
-      console.error('❌ Error in Category.getById():', error.message);
-      throw error;
-    }
+  static async getById(id) {
+    const db = dbManager.getDb();
+    const sql = 'SELECT * FROM categories WHERE id = ?';
+    return await dbGet(db, sql, [id]);
   }
 
-  static create(data) {
-    try {
-      const { name, description = '' } = data;
+  static async create(data) {
+    const db = dbManager.getDb();
+    const { name, description } = data;
 
-      // Validate required fields
-      if (!name) {
-        throw new Error('Category name is required');
-      }
+    const sql = `
+      INSERT INTO categories (name, description)
+      VALUES (?, ?)
+    `;
 
-      const sql = `
-        INSERT INTO categories (name, description) 
-        VALUES (?, ?)
-      `;
-      const stmt = db.getDb().prepare(sql);
-      const result = stmt.run(name, description);
-
-      // Return created category
-      return this.getById(result.lastInsertRowid);
-    } catch (error) {
-      console.error('❌ Error in Category.create():', error.message);
-      throw error;
-    }
+    const result = await dbRun(db, sql, [name, description || null]);
+    return await this.getById(result.lastID);
   }
 
-  static update(id, data) {
-    try {
-      const { name, description } = data;
+  static async update(id, data) {
+    const db = dbManager.getDb();
+    const { name, description } = data;
 
-      if (!name) {
-        throw new Error('Category name is required');
-      }
+    const sql = `
+      UPDATE categories 
+      SET name = ?, description = ?
+      WHERE id = ?
+    `;
 
-      const sql = `
-        UPDATE categories 
-        SET name = ?, description = ? 
-        WHERE id = ?
-      `;
-      const stmt = db.getDb().prepare(sql);
-      const result = stmt.run(name, description, id);
-
-      if (result.changes === 0) {
-        return null;
-      }
-
-      return this.getById(id);
-    } catch (error) {
-      console.error('❌ Error in Category.update():', error.message);
-      throw error;
-    }
+    await dbRun(db, sql, [name, description || null, id]);
+    return await this.getById(id);
   }
 
-  static delete(id) {
-    try {
-      const sql = 'DELETE FROM categories WHERE id = ?';
-      const stmt = db.getDb().prepare(sql);
-      const result = stmt.run(id);
-      return result.changes > 0;
-    } catch (error) {
-      console.error('❌ Error in Category.delete():', error.message);
-      throw error;
-    }
+  static async delete(id) {
+    const db = dbManager.getDb();
+    const sql = 'DELETE FROM categories WHERE id = ?';
+    const result = await dbRun(db, sql, [id]);
+    return result.changes > 0;
   }
 
-  static getStats() {
-    try {
-      const sql = `
-        SELECT 
-          COUNT(*) as total,
-          COUNT(DISTINCT c.id) as totalCategories,
-          COUNT(p.id) as totalProducts
-        FROM categories c
-        LEFT JOIN products p ON c.id = p.category_id
-      `;
-      const stmt = db.getDb().prepare(sql);
-      return stmt.get();
-    } catch (error) {
-      console.error('❌ Error in Category.getStats():', error.message);
-      throw error;
-    }
+  static async getStats() {
+    const db = dbManager.getDb();
+    const sql = `
+      SELECT 
+        c.id,
+        c.name,
+        c.description,
+        COUNT(p.id) as product_count
+      FROM categories c
+      LEFT JOIN products p ON c.id = p.category_id
+      GROUP BY c.id, c.name, c.description
+      ORDER BY product_count DESC, c.name ASC
+    `;
+
+    return await dbAll(db, sql);
   }
 }
 

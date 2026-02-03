@@ -6,10 +6,10 @@ const Category = require('../models/Category');
  */
 
 // GET all categories
-exports.getAll = (req, res) => {
+exports.getAll = async (req, res) => {
   try {
     const { search } = req.query;
-    const categories = Category.getAll({ search });
+    const categories = await Category.getAll({ search });
 
     res.json({
       success: true,
@@ -29,7 +29,7 @@ exports.getAll = (req, res) => {
 };
 
 // GET single category by ID
-exports.getById = (req, res) => {
+exports.getById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -40,7 +40,7 @@ exports.getById = (req, res) => {
       });
     }
 
-    const category = Category.getById(id);
+    const category = await Category.getById(id);
 
     if (!category) {
       return res.status(404).json({
@@ -66,7 +66,7 @@ exports.getById = (req, res) => {
 };
 
 // POST - Create new category
-exports.create = (req, res) => {
+exports.create = async (req, res) => {
   try {
     const { name, description } = req.body;
 
@@ -85,7 +85,7 @@ exports.create = (req, res) => {
       });
     }
 
-    const category = Category.create({ name, description });
+    const category = await Category.create({ name, description });
 
     res.status(201).json({
       success: true,
@@ -114,7 +114,7 @@ exports.create = (req, res) => {
 };
 
 // PUT - Update category
-exports.update = (req, res) => {
+exports.update = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
@@ -126,14 +126,21 @@ exports.update = (req, res) => {
       });
     }
 
-    if (name && (typeof name !== 'string' || name.length < 2 || name.length > 100)) {
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Category name is required and must be a string' },
+      });
+    }
+
+    if (name.length < 2 || name.length > 100) {
       return res.status(400).json({
         success: false,
         error: { message: 'Category name must be between 2 and 100 characters' },
       });
     }
 
-    const category = Category.update(id, { name, description });
+    const category = await Category.update(id, { name, description });
 
     if (!category) {
       return res.status(404).json({
@@ -168,7 +175,7 @@ exports.update = (req, res) => {
 };
 
 // DELETE category
-exports.delete = (req, res) => {
+exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -179,7 +186,7 @@ exports.delete = (req, res) => {
       });
     }
 
-    const deleted = Category.delete(id);
+    const deleted = await Category.delete(id);
 
     if (!deleted) {
       return res.status(404).json({
@@ -211,9 +218,9 @@ exports.delete = (req, res) => {
 };
 
 // GET category stats
-exports.getStats = (req, res) => {
+exports.getStats = async (req, res) => {
   try {
-    const stats = Category.getStats();
+    const stats = await Category.getStats();
 
     res.json({
       success: true,

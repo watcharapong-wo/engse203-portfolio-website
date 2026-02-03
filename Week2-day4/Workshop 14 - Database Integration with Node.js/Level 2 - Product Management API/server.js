@@ -10,9 +10,9 @@ let server;
 async function startServer() {
   try {
     // Connect to database
-    dbManager.connect();
-    dbManager.createSchema();
-    dbManager.seedData();
+    await dbManager.connect();
+    await dbManager.createSchema();
+    await dbManager.seedData();
 
     // Start Express server
     server = app.listen(PORT, HOST, () => {
@@ -40,7 +40,7 @@ Press Ctrl+C to stop the server
 }
 
 // Graceful Shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('\n📦 Shutting down gracefully...');
 
   if (server) {
@@ -49,7 +49,7 @@ process.on('SIGINT', () => {
     });
   }
 
-  dbManager.close();
+  await dbManager.close();
   process.exit(0);
 });
 
