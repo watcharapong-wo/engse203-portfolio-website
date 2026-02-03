@@ -1,0 +1,21 @@
+{
+  "name": "workshop-15-level-1-mongodb-basics",
+  "version": "1.0.0",
+  "description": "MongoDB CRUD Operations with Mongoose - Student Management",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "node test.js"
+  },
+  "keywords": ["mongodb", "mongoose", "crud", "nosql"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "mongoose": "^8.0.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
