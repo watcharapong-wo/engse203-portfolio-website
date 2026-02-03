@@ -1,0 +1,14 @@
+{
+  "name": "library-system",
+  "version": "1.0.0",
+  "description": "Workshop 13 - Level 2: Simple Library System",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "reset": "node -e \"const {reset} = require('./db'); reset();\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.6.2"
+  }
+}
