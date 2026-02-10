@@ -1,0 +1,12 @@
+
+# Node / Test artifacts
+node_modules/
+**/node_modules/
+coverage/
+**/coverage/
+jest-result.json
+**/jest-result.json
+.env
+**/.env
+week1-day1/week2-day3/
+
